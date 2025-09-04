@@ -1,0 +1,291 @@
+<!--
+Copyright (c) 2025 Jodi Layman
+All Rights Reserved.
+
+Unauthorized copying, modification, distribution, or use
+of this code, via any medium, is strictly prohibited.
+Proprietary and confidential.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gizmo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 0;
+    }
+    .chat-container {
+      max-width: 600px;
+      margin: 0 auto;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .chatbox {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #e5e5e5;
+    }
+    .message {
+      max-width: 80%;
+      padding: 12px 15px;
+      margin: 8px 0;
+      border-radius: 15px;
+      clear: both;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .bot {
+      background-color: #ffffff;
+      float: left;
+      border-bottom-left-radius: 0;
+    }
+    .user {
+      background-color: #007bff;
+      color: white;
+      float: right;
+      text-align: right;
+      border-bottom-right-radius: 0;
+    }
+    .input-area {
+      display: flex;
+      border-top: 1px solid #ccc;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      font-size: 16px;
+    }
+    button {
+      padding: 15px 20px;
+      border: none;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:disabled {
+      background: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chatbox" id="chatbox">
+      <!-- Chat messages will appear here -->
+    </div>
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Type your response..." autofocus />
+      <button onclick="handleUserInput()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const chatbox = document.getElementById('chatbox');
+    const input = document.getElementById('userInput');
+
+    let step = 0;
+    let username = '';
+    let issueChoice = '';
+    let memory = {
+      issues: [],
+      emailProblems: [],
+      toldUserInfo: false
+    };
+
+    function appendMessage(text, sender = 'bot') {
+      const message = document.createElement('div');
+      message.className = `message ${sender}`;
+      message.textContent = text;
+      chatbox.appendChild(message);
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    function handleUserInput() {
+      const userText = input.value.trim();
+      if (!userText) return;
+
+      appendMessage(userText, 'user');
+      input.value = '';
+
+      setTimeout(() => nextStep(userText), 400);
+    }
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleUserInput();
+      }
+    });
+
+    function nextStep(userInput) {
+      if (step === 0) {
+        username = userInput;
+        appendMessage(`Nice to meet you, ${username}. What issue are you experiencing?`);
+        showMenu();
+        step = 1;
+      } else if (step === 1) {
+        issueChoice = userInput;
+        memory.issues.push(issueChoice);
+        switch (issueChoice) {
+          case '1':
+            appendMessage("Are you connected to Wi-Fi? (yes/no)");
+            step = 'internet';
+            break;
+          case '2':
+            appendMessage("Have you tried restarting your computer? (yes/no)");
+            step = 'slowPC';
+            break;
+          case '3':
+            appendMessage("What problem are you having with your email?\n1. Not responding\n2. Cannot connect to server\n3. Archives\n4. Calendar");
+            step = 'email';
+            break;
+          case '4':
+            appendMessage("Is the printer powered on? (yes/no)");
+            step = 'printer';
+            break;
+          case '5':
+            appendMessage("Do you have admin rights on your PC? (yes/no)");
+            step = 'software';
+            break;
+          case '6':
+          case '7':
+          case '8':
+            appendMessage("Please describe your issue:");
+            step = 'other';
+            break;
+          default:
+            appendMessage("Invalid option. Please enter a number from 1 to 8.");
+        }
+      } else if (step === 'internet') {
+        if (userInput === 'no') {
+          appendMessage("🔌 Please turn on Wi-Fi and connect to a known network.");
+        } else {
+          appendMessage("Try:\n- Restart your router\n- Check other devices\n- Run network troubleshooter");
+        }
+        postIssue();
+      } else if (step === 'slowPC') {
+        if (userInput === 'no') {
+          appendMessage("🔄 Please restart your computer. It solves many temporary issues.");
+        } else {
+          appendMessage("Try:\n- Close background apps\n- Check Task Manager\n- Run a malware scan");
+        }
+        postIssue();
+      } else if (step === 'email') {
+        memory.emailProblems.push(userInput);
+        const map = {
+          '1': "Restart your PC and check updates.",
+          '2': "Ensure your computer is connected to a network.",
+          '3': "Check Archives via File > Data Files if not using Office 365.",
+          '4': "To share calendar: File > Share Calendar > Add Delegates"
+        };
+        appendMessage(map[userInput] || "Invalid option.");
+        postIssue();
+      } else if (step === 'printer') {
+        if (userInput === 'no') {
+          appendMessage("🔌 Please turn on the printer and check power cables.");
+        } else {
+          appendMessage("Try:\n- Check printer connection\n- Reinstall driver\n- Clear print queue");
+        }
+        postIssue();
+      } else if (step === 'software') {
+        if (userInput === 'no') {
+          appendMessage("🛑 You need admin rights. Contact IT support.");
+          postIssue();
+        } else {
+          appendMessage("Which software are you trying to install?");
+          step = 'software-name';
+        }
+      } else if (step === 'software-name') {
+        appendMessage(`Steps for installing ${userInput}:\n1. Download from official site\n2. Run as admin\n3. Follow setup`);
+        postIssue();
+      } else if (step === 'other') {
+        appendMessage("Thanks. Please log this issue on JIRA Service.");
+        postIssue();
+      } else if (step === 'post-issue') {
+        if (userInput === 'yes') {
+          askAgain();
+        } else {
+          appendMessage("Would you like to:\n1. Tell me more about the problem\n2. Get contact info for IT support");
+          step = 'followup';
+        }
+      } else if (step === 'followup') {
+        if (userInput === '1') {
+          appendMessage("Please describe more details:");
+          step = 'more-detail';
+        } else if (userInput === '2') {
+          if (!memory.toldUserInfo) {
+            appendMessage("📞 Contact IT: 0218084367 or log a ticket via JIRA Service Desk.");
+            memory.toldUserInfo = true;
+          } else {
+            appendMessage("You've already received contact info earlier.");
+          }
+          askAgain();
+        } else {
+          appendMessage("Invalid option. Returning to the menu.");
+          showMenu();
+          step = 1;
+        }
+      } else if (step === 'more-detail') {
+        let response = "🔍 Please contact IT directly or log a request on JIRA.";
+        const suggestions = [
+          { keywords: ["wifi", "internet"], tip: "📶 Suggestion: Reconnect to Wi-Fi or restart your router." },
+          { keywords: ["slow", "lag"], tip: "🐢 Suggestion: Close unused apps, scan for malware, check Task Manager." },
+          { keywords: ["email", "mail"], tip: "📧 Suggestion: Check server settings or re-add your account." },
+          { keywords: ["printer"], tip: "🖨️ Suggestion: Reconnect the printer, reinstall drivers." },
+          { keywords: ["software", "install"], tip: "💾 Suggestion: Make sure you have admin rights and use official installers." }
+        ];
+        for (let item of suggestions) {
+          if (item.keywords.some(word => userInput.toLowerCase().includes(word))) {
+            response = item.tip;
+            break;
+          }
+        }
+        appendMessage(response);
+        askAgain();
+      } else if (step === 'ask-again') {
+        if (userInput === 'yes') {
+          showMenu();
+          step = 1;
+        } else {
+          appendMessage(`Thanks for chatting, ${username}. Have a great day! 😊`);
+          input.disabled = true;
+        }
+      }
+    }
+
+    function showMenu() {
+      appendMessage(`
+1. I can't connect to the internet
+2. My computer is slow
+3. I need help with Emails
+4. My printer isn't working
+5. Software installation issues
+6. SUN ID
+7. SUN Student
+8. Other`);
+    }
+
+    function postIssue() {
+      appendMessage("Is your problem resolved? (yes/no)");
+      step = 'post-issue';
+    }
+
+    function askAgain() {
+      appendMessage("Do you need help with anything else? (yes/no)");
+      step = 'ask-again';
+    }
+
+    // Start the chat
+    appendMessage("👋 Hello! Welcome to Gizmo");
+    appendMessage("Can I have your name please?");
+  </script>
+</body>
+</html>
